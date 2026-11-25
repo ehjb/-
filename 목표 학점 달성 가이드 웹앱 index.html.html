@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>학점 메이커 (GPA Goal Tracker)</title>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-light: #eef2ff;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --radius: 16px;
+      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 24px 16px 48px;
+    }
+
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* 헤더 */
+    header {
+      text-align: center;
+      padding: 12px 0;
+    }
+
+    .badge {
+      display: inline-block;
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: 1.85rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #1e1b4b;
+      margin-bottom: 8px;
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    /* 카드 공통 스타일 */
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      padding: 28px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+
+    .card h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* 폼 레이아웃 */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .full-width {
+      grid-column: span 2;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #334155;
+    }
+
+    .helper-text {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 1rem;
+      background: #fff;
+      color: var(--text);
+      transition: all 0.2s ease;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+    }
+
+    .btn-submit {
+      width: 100%;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      margin-top: 10px;
+    }
+
+    .btn-submit:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-submit:active {
+      transform: scale(0.99);
+    }
+
+    /* 결과 대시보드 */
+    #resultSection {
+      display: none;
+    }
+
+    .result-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .stat-box {
+      background: var(--bg);
+      padding: 16px;
+      border-radius: 12px;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    /* 진행도 바 */
+    .progress-container {
+      margin-bottom: 24px;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .progress-track {
+      background: #e2e8f0;
+      height: 12px;
+      border-radius: 9999px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #6366f1, #4f46e5);
+      border-radius: 9999px;
+      transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+      width: 0%;
+    }
+
+    /* 피드백 및 응원 박스 */
+    .feedback-box {
+      padding: 18px 20px;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      border-left: 4px solid var(--primary);
+      background: var(--primary-light);
+      margin-bottom: 12px;
+    }
+
+    .feedback-box.impossible {
+      border-left-color: var(--danger);
+      background: #fef2f2;
+      color: #991b1b;
+    }
+
+    .feedback-box.difficult {
+      border-left-color: var(--warning);
+      background: #fffbeb;
+      color: #92400e;
+    }
+
+    .feedback-box.achievable {
+      border-left-color: var(--success);
+      background: #f0fdf4;
+      color: #166534;
+    }
+
+    .motivation-quote {
+      font-style: italic;
+      color: #475569;
+      font-size: 0.9rem;
+      text-align: center;
+      padding: 8px;
+    }
+
+    /* 공부 팁 섹션 */
+    .tips-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .tip-card {
+      background: #fafafa;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .tip-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .tip-icon {
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+    }
+
+    .tip-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: #1e293b;
+    }
+
+    .tip-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* 반응형 스타일 */
+    @media (max-width: 640px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .full-width {
+        grid-column: span 1;
+      }
+
+      .result-stats {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .tips-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .card {
+        padding: 20px;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- 헤더 -->
+    <header>
+      <span class="badge">🔥 대학생 학점 역전 프로젝트</span>
+      <h1>학점 달성 플래너 & 동기부여</h1>
+      <p class="subtitle">현재 학점을 바탕으로 남은 학기 동안 필요한 목표 성적을 계산해 보세요.</p>
+    </header>
+
+    <!-- 입력 카드 -->
+    <div class="card">
+      <h2>🎯 학점 정보 입력</h2>
+      <!-- 알림 메시지 영역 -->
+      <div id="alertBox" style="display:none; background:#fee2e2; border:1px solid #f87171; color:#991b1b; padding:12px 16px; border-radius:10px; margin-bottom:16px; font-size:0.9rem; font-weight:600;"></div>
+
+      <form id="gpaForm" onsubmit="event.preventDefault(); calculateGPA();">
+        <div class="form-grid">
+          <div class="input-group">
+            <label for="scale">학점 만점 기준</label>
+            <select id="scale">
+              <option value="4.5" selected>4.5 만점</option>
+              <option value="4.3">4.3 만점</option>
+            </select>
+          </div>
+
+          <div class="input-group">
+            <label for="currentGpa">현재 누적 평점</label>
+            <input type="number" id="currentGpa" step="0.01" min="0" max="4.5" placeholder="예: 3.25" value="3.25">
+          </div>
+
+          <div class="input-group">
+            <label for="targetGpa">목표 졸업 평점</label>
+            <input type="number" id="targetGpa" step="0.01" min="0" max="4.5" placeholder="예: 3.80" value="3.80">
+          </div>
+
+          <div class="input-group">
+            <label for="completedCredits">기이수 학점</label>
+            <input type="number" id="completedCredits" min="0" max="250" placeholder="예: 60" value="60">
+            <span class="helper-text">지금까지 채운 학점 총합</span>
+          </div>
+
+          <div class="input-group full-width">
+            <label for="remainingCredits">앞으로 남은 이수 학점</label>
+            <input type="number" id="remainingCredits" min="1" max="250" placeholder="예: 70" value="70">
+            <span class="helper-text">졸업까지 앞으로 들어야 할 학점</span>
+          </div>
+        </div>
+
+        <button type="button" id="calcBtn" class="btn-submit" onclick="calculateGPA()">목표 분석 & 필요 학점 계산하기</button>
+      </form>
+    </div>
+
+    <!-- 결과 대시보드 -->
+    <div class="card" id="resultSection">
+      <h2>📊 분석 결과 및 달성 전략</h2>
+
+      <div class="progress-container">
+        <div class="progress-header">
+          <span>목표치 대비 진행도</span>
+          <span id="progressPercent">0%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progressBar"></div>
+        </div>
+      </div>
+
+      <div class="result-stats">
+        <div class="stat-box">
+          <div class="stat-label">필요한 상승폭</div>
+          <div class="stat-value" id="gpaGap">+0.00</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">남은 학기 요구 평점</div>
+          <div class="stat-value" id="requiredGpa">0.00</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">필요 학점 등급</div>
+          <div class="stat-value" id="requiredGrade">-</div>
+        </div>
+      </div>
+
+      <div id="feedbackBox" class="feedback-box">
+        <!-- 맞춤형 피드백 텍스트 -->
+      </div>
+
+      <div class="motivation-quote" id="quoteBox">
+        "시작하는 방법은 말을 멈추고 행동하기 시작하는 것이다."
+      </div>
+    </div>
+
+    <!-- 학점 관리 공부 팁 -->
+    <div class="card">
+      <h2>💡 A+ 달성을 위한 실전 대학 공부 팁</h2>
+      <div class="tips-grid">
+        <div class="tip-card">
+          <div class="tip-icon">📅</div>
+          <div class="tip-title">실라버스(강의계획서) 분석</div>
+          <div class="tip-desc">평가 비율(출석, 과제, 시험)을 미리 파악하세요. 지각/결석 감점을 막는 것만으로도 B+이 보장됩니다.</div>
+        </div>
+
+        <div class="tip-card">
+          <div class="tip-icon">✍️</div>
+          <div class="tip-title">과제 마감 3일 전 제출 루틴</div>
+          <div class="tip-desc">과제는 채점 기준표(Rubric)에 맞춰 항목별로 빠짐없이 작성하고, 미리 끝내야 시험 기간 부담이 줄어듭니다.</div>
+        </div>
+
+        <div class="tip-card">
+          <div class="tip-icon">🎯</div>
+          <div class="tip-title">교수님 강조 키워드 필기</div>
+          <div class="tip-desc">교수님이 수업 중 2번 이상 반복하거나 PPT에 없는 예시를 든 부분은 80% 이상 시험에 출제됩니다.</div>
+        </div>
+
+        <div class="tip-card">
+          <div class="tip-icon">⏳</div>
+          <div class="tip-title">뽀모도로 50/10 학습법</div>
+          <div class="tip-desc">50분 집중, 10분 완전 휴식을 반복하세요. 시험 전날 벼락치기보다 일주일 분산 학습이 학점을 결정합니다.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 동기부여 문구 모음
+    const quotes = [
+      "노력은 결코 배신하지 않는다. 남은 학기는 충분히 바꿀 수 있습니다!",
+      "오늘의 1시간 집중이 다음 학기 장학금과 뿌듯한 성적표를 만듭니다.",
+      "목표를 정한 순간 이미 절반은 달성한 것입니다. 한 걸음씩 나아가세요.",
+      "과거의 평점은 숫자에 불과합니다. 남은 학점이 당신의 진짜 실력입니다.",
+      "작은 습관이 모여 A+ 성적표가 됩니다. 오늘도 집중 모드 가동!"
+    ];
+
+    const scaleSelect = document.getElementById('scale');
+    const currentGpaInput = document.getElementById('currentGpa');
+    const targetGpaInput = document.getElementById('targetGpa');
+    const completedCreditsInput = document.getElementById('completedCredits');
+    const remainingCreditsInput = document.getElementById('remainingCredits');
+    const resultSection = document.getElementById('resultSection');
+    const alertBox = document.getElementById('alertBox');
+
+    // 스케일 변경 시 입력 최대치 동적 변경
+    scaleSelect.addEventListener('change', () => {
+      const max = scaleSelect.value;
+      currentGpaInput.max = max;
+      targetGpaInput.max = max;
+      if (parseFloat(currentGpaInput.value) > parseFloat(max)) {
+        currentGpaInput.value = max;
+      }
+      if (parseFloat(targetGpaInput.value) > parseFloat(max)) {
+        targetGpaInput.value = max;
+      }
+    });
+
+    function showAlert(msg) {
+      alertBox.textContent = msg;
+      alertBox.style.display = 'block';
+      alertBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function hideAlert() {
+      alertBox.style.display = 'none';
+      alertBox.textContent = '';
+    }
+
+    // 메인 계산 함수 (버튼 클릭 및 폼 제출 시 호출)
+    function calculateGPA() {
+      hideAlert();
+
+      const scale = parseFloat(scaleSelect.value) || 4.5;
+      const currentGpa = parseFloat(currentGpaInput.value);
+      const targetGpa = parseFloat(targetGpaInput.value);
+      const completed = parseFloat(completedCreditsInput.value);
+      const remaining = parseFloat(remainingCreditsInput.value);
+
+      // 1. 유효성 검사
+      if (isNaN(currentGpa) || isNaN(targetGpa) || isNaN(completed) || isNaN(remaining)) {
+        showAlert('모든 입력 항목에 올바른 숫자를 입력해 주세요.');
+        return;
+      }
+
+      if (currentGpa < 0 || targetGpa < 0 || completed < 0 || remaining <= 0) {
+        showAlert('현재 평점/이수학점은 0 이상, 남은 이수 학점은 1 이상이어야 합니다.');
+        return;
+      }
+
+      if (currentGpa > scale) {
+        showAlert(`현재 누적 평점(${currentGpa})이 만점 기준(${scale})을 초과할 수 없습니다.`);
+        return;
+      }
+
+      if (targetGpa > scale) {
+        showAlert(`목표 평점(${targetGpa})이 만점 기준(${scale})을 초과할 수 없습니다.`);
+        return;
+      }
+
+      // 2. 계산 로직:
+      // (현재평점 * 기이수학점 + 필요평점 * 남은학점) / (총학점) = 목표평점
+      // 필요평점 = (목표평점 * 총학점 - 현재평점 * 기이수학점) / 남은학점
+      const totalCredits = completed + remaining;
+      const targetTotalPoints = targetGpa * totalCredits;
+      const currentPoints = currentGpa * completed;
+      const requiredPoints = targetTotalPoints - currentPoints;
+      const requiredGpa = requiredPoints / remaining;
+      const gap = targetGpa - currentGpa;
+
+      // 3. 화면 결과 업데이트
+      displayResults(scale, currentGpa, targetGpa, gap, requiredGpa, remaining);
+
+      // 4. 로컬 스토리지 안전 저장 (iframe 환경 예외 방어)
+      try {
+        if (typeof window.localStorage !== 'undefined') {
+          localStorage.setItem('gpa_tracker_data', JSON.stringify({
+            scale, currentGpa, targetGpa, completed, remaining
+          }));
+        }
+      } catch (err) {
+        console.warn('LocalStorage 저장 제한 환경:', err);
+      }
+    }
+
+    function displayResults(scale, currentGpa, targetGpa, gap, requiredGpa, remaining) {
+      resultSection.style.display = 'block';
+
+      // 1. 통계 값 설정
+      const gapSign = gap >= 0 ? `+${gap.toFixed(2)}` : `${gap.toFixed(2)}`;
+      document.getElementById('gpaGap').innerText = gapSign;
+      document.getElementById('requiredGpa').innerText = requiredGpa <= 0 ? '0.00' : requiredGpa.toFixed(2);
+
+      // 2. 진행도 바
+      const progressPercent = Math.min(Math.max((currentGpa / targetGpa) * 100, 0), 100).toFixed(1);
+      document.getElementById('progressPercent').innerText = `${progressPercent}%`;
+      const progressBar = document.getElementById('progressBar');
+      progressBar.style.width = '0%';
+      setTimeout(() => {
+        progressBar.style.width = `${progressPercent}%`;
+      }, 50);
+
+      // 3. 필요 등급 및 피드백 산출
+      const feedbackBox = document.getElementById('feedbackBox');
+      const requiredGradeEl = document.getElementById('requiredGrade');
+      feedbackBox.className = 'feedback-box';
+
+      if (requiredGpa > scale) {
+        // 만점 초과 (도달 불가)
+        feedbackBox.classList.add('impossible');
+        requiredGradeEl.innerText = '달성 불가';
+        feedbackBox.innerHTML = `
+          <strong>⚠️ 목표 평점이 만점(${scale})을 초과합니다.</strong><br>
+          남은 학점(${remaining}학점) 동안 모든 과목에서 만점(${scale})을 받아도 해당 목표는 현실적으로 도달하기 어렵습니다. 목표 평점을 현실적인 수치로 조정해 보세요.
+        `;
+      } else if (requiredGpa <= 0) {
+        // 이미 달성한 경우
+        feedbackBox.classList.add('achievable');
+        requiredGradeEl.innerText = '달성 완료';
+        feedbackBox.innerHTML = `
+          <strong>🎉 이미 목표 학점을 달성한 상태입니다!</strong><br>
+          남은 학기 동안 기본 성적만 유지하셔도 충분히 목표를 초과 달성할 수 있습니다. 방심하지 말고 꾸준함을 유지하세요!
+        `;
+      } else {
+        // 달성 가능 구간
+        let gradeText = '';
+        if (scale === 4.5) {
+          if (requiredGpa >= 4.3) gradeText = 'A+ 유지';
+          else if (requiredGpa >= 3.8) gradeText = 'A0 수준';
+          else if (requiredGpa >= 3.3) gradeText = 'B+ 수준';
+          else gradeText = 'B0 이하';
+        } else {
+          if (requiredGpa >= 4.0) gradeText = 'A+ 유지';
+          else if (requiredGpa >= 3.6) gradeText = 'A0 수준';
+          else if (requiredGpa >= 3.0) gradeText = 'B+ 수준';
+          else gradeText = 'B0 이하';
+        }
+
+        requiredGradeEl.innerText = gradeText;
+
+        if (requiredGpa >= scale - 0.2) {
+          feedbackBox.classList.add('difficult');
+          feedbackBox.innerHTML = `
+            <strong>🔥 고강도 집중이 필요한 도전적인 목표입니다!</strong><br>
+            남은 기간 동안 거의 모든 과목에서 최상위 성적(<b>평균 ${requiredGpa.toFixed(2)}</b>, ${gradeText})을 받아야 합니다. 철저한 과제 루틴과 전공 스터디, 족보 분석을 적극 활용하세요!
+          `;
+        } else {
+          feedbackBox.classList.add('achievable');
+          feedbackBox.innerHTML = `
+            <strong>✨ 충분히 달성 가능한 안정권 목표입니다!</strong><br>
+            남은 학기 동안 평균 <b>${requiredGpa.toFixed(2)} (${gradeText})</b> 수준을 유지하면 졸업 시 목표 평점을 무난히 달성할 수 있습니다. 끝까지 페이스를 유지해보세요!
+          `;
+        }
+      }
+
+      // 4. 무작위 명언 출력
+      const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+      document.getElementById('quoteBox').innerText = `"${randomQuote}"`;
+
+      // 5. 스크롤 이동
+      setTimeout(() => {
+        resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
+    }
+
+    // 로컬 스토리지 데이터 안전 복원
+    try {
+      if (typeof window.localStorage !== 'undefined') {
+        const saved = localStorage.getItem('gpa_tracker_data');
+        if (saved) {
+          const data = JSON.parse(saved);
+          if (data.scale) scaleSelect.value = data.scale;
+          if (data.currentGpa) currentGpaInput.value = data.currentGpa;
+          if (data.targetGpa) targetGpaInput.value = data.targetGpa;
+          if (data.completed) completedCreditsInput.value = data.completed;
+          if (data.remaining) remainingCreditsInput.value = data.remaining;
+        }
+      }
+    } catch (e) {
+      console.warn('LocalStorage 로드 제한:', e);
+    }
+
+    // 엔터키 입력 시에도 자동 계산 실행
+    document.getElementById('gpaForm').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        calculateGPA();
+      }
+    });
+  </script>
+</body>
+</html>
